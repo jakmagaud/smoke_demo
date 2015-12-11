@@ -11,6 +11,7 @@
 #include <memory>
 #include <stdexcept>
 #include <math.h>
+
 #if __GNUG__
 #   include <tr1/memory>
 #endif
@@ -50,16 +51,12 @@ using namespace tr1; // for shared_ptr
 // loaded
 // ----------------------------------------------------------------------------
 static const bool g_Gl2Compatible = false;
-
-
 static const float g_frustMinFov = 60.0;  // A minimal of 60 degree field of view
 static float g_frustFovY = g_frustMinFov; // FOV in y direction (updated by updateFrustFovY)
-
 static const float g_frustNear = -0.1;    // near plane
 static const float g_frustFar = -50.0;    // far plane
 static const float g_groundY = -2.0;      // y coordinate of the ground
 static const float g_groundSize = 10.0;   // half the ground length
-
 static int g_windowWidth = 512;
 static int g_windowHeight = 512;
 static bool g_mouseClickDown = false;    // is the mouse button pressed
@@ -68,8 +65,17 @@ static bool g_spaceDown = false;         // space state, for middle mouse emulat
 static bool g_worldFrame = true;
 static int g_mouseClickX, g_mouseClickY; // coordinates for mouse click event
 static int g_activeShader = 0;
-static int cur_eye = 0; //indicator for point of view
-static int cur_obj = 2; //indicator for current object being manipulated
+
+
+struct Particle {
+    GLfloat x,y,z; //position
+    GLfloat xv, yv, zv; //velocity
+    GLfloat life;
+};
+
+const int MaxParticles = 1000;
+Particle particles[MaxParticles];
+
 
 struct ShaderState {
 GlProgram program;
@@ -209,29 +215,30 @@ RigTForm currRbt = g_originRbt;
 ///////////////// END OF G L O B A L S //////////////////////////////////////////////////
 
 static void initGround() {
-// A x-z plane at y = g_groundY of dimension [-g_groundSize, g_groundSize]^2
-VertexPN vtx[4] = {
-	VertexPN(-g_groundSize, g_groundY, -g_groundSize, 0, 1, 0),
-	VertexPN(-g_groundSize, g_groundY,  g_groundSize, 0, 1, 0),
-	VertexPN(g_groundSize, g_groundY,  g_groundSize, 0, 1, 0),
-	VertexPN(g_groundSize, g_groundY, -g_groundSize, 0, 1, 0),
-};
-unsigned short idx[] = { 0, 1, 2, 0, 2, 3 };
-g_ground.reset(new Geometry(&vtx[0], &idx[0], 4, 6));
+    // A x-z plane at y = g_groundY of dimension [-g_groundSize, g_groundSize]^2
+    VertexPN vtx[4] = {
+        VertexPN(-g_groundSize, g_groundY, -g_groundSize, 0, 1, 0),
+        VertexPN(-g_groundSize, g_groundY,  g_groundSize, 0, 1, 0),
+        VertexPN(g_groundSize, g_groundY,  g_groundSize, 0, 1, 0),
+        VertexPN(g_groundSize, g_groundY, -g_groundSize, 0, 1, 0),
+    };
+    unsigned short idx[] = { 0, 1, 2, 0, 2, 3 };
+    g_ground.reset(new Geometry(&vtx[0], &idx[0], 4, 6));
 }
 
-static void initCubes() {
-    int ibLen, vbLen;
-    getCubeVbIbLen(vbLen, ibLen);
-
-    // Temporary storage for cube geometry
-    vector<VertexPN> vtx(vbLen);
-    vector<unsigned short> idx(ibLen);
-
-    makeCube(1, vtx.begin(), idx.begin());
-    g_cube.reset(new Geometry(&vtx[0], &idx[0], vbLen, ibLen));
-    makeCube(1, vtx.begin(), idx.begin());
-    g_cube2.reset(new Geometry(&vtx[0], &idx[0], vbLen, ibLen));
+static void initParticles() {
+    for (int i = 0; i < MaxParticles; i++) {
+        particles[i].x = 0.0;
+        particles[i].y = 0.0;
+        particles[i].z = 0.0;
+        float spread = 1.5;
+        Cvec3 gen_dir = Cvec3(0.0, 10.0, 0.0); //general direction of the particles
+        float rand_dir = (rand()%2000 - 1000.0f)/1000.0f;
+        particles[i].xv = gen_dir[0] + rand_dir * spread;
+        particles[i].yv = gen_dir[1] + rand_dir * spread;
+        particles[i].zv = gen_dir[2] + rand_dir * spread;
+        particles[i].life = 5;
+    }
 }
 
 // takes a projection matrix and send to the the shaders
@@ -274,13 +281,6 @@ static void drawStuff() {
     const Matrix4 projmat = makeProjectionMatrix();
     sendProjectionMatrix(curSS, projmat);
 
-    // define eyeRbt based on what cur_eye is set to
-    if (cur_eye == 0)
-        eyeRbt = g_skyRbt;
-    else if (cur_eye == 1)
-        eyeRbt = g_objectRbt[0];
-    else
-        eyeRbt = g_objectRbt[1];
     const RigTForm invEyeRbt = inv(eyeRbt);
 
     const Cvec3 eyeLight1 = Cvec3(invEyeRbt * Cvec4(g_light1, 1)); // g_light1 position in eye coordinates
@@ -297,20 +297,6 @@ static void drawStuff() {
     sendModelViewNormalMatrix(curSS, MVM, NMVM);
     safe_glUniform3f(curSS.h_uColor, 0.1, 0.95, 0.1); // set color
     g_ground->draw(curSS);
-
-    // draw cubes
-    // ==========
-    MVM = rigTFormToMatrix(invEyeRbt * g_objectRbt[0]);
-    NMVM = normalMatrix(MVM);
-    sendModelViewNormalMatrix(curSS, MVM, NMVM);
-    safe_glUniform3f(curSS.h_uColor, g_objectColors[0][0], g_objectColors[0][1], g_objectColors[0][2]);
-    g_cube->draw(curSS);
-
-    MVM = rigTFormToMatrix(invEyeRbt * g_objectRbt[1]);
-    NMVM = normalMatrix(MVM);
-    sendModelViewNormalMatrix(curSS, MVM, NMVM);
-    safe_glUniform3f(curSS.h_uColor, g_objectColors[1][0], g_objectColors[1][1], g_objectColors[1][2]);
-    g_cube2->draw(curSS);
 }
 
 static void display() {
@@ -390,37 +376,6 @@ static void keyboard(const unsigned char key, const int x, const int y) {
     case ' ':
         g_spaceDown = true;
         break;
-    case 'v':
-        if (cur_eye == 0)
-        {
-            cur_eye++;
-            cout << "Active eye is red cube\n";
-        }
-        else if (cur_eye == 1)
-        {
-            cur_eye++;
-            cout << "Active eye is blue cube\n";
-        }
-        else
-        {
-            cur_eye = 0;
-            cout << "Active eye is sky\n";
-
-        }
-        break;
-
-    case 'm':
-        if (g_worldFrame == false)
-        {
-            g_worldFrame = true;
-            cout << "Editing sky eye w.r.t world-sky frame\n";
-        }
-        else
-        {
-            g_worldFrame = false;
-            cout << "Editing sky eye w.r.t sky-sky frame\n";
-        }
-        break;
     }
     glutPostRedisplay();
 }
@@ -433,7 +388,7 @@ static void initGlutState(int argc, char * argv[]) {
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);  //  RGBA pixel channels and double buffering
     #endif
     glutInitWindowSize(g_windowWidth, g_windowHeight);      // create a window
-    glutCreateWindow("Assignment 3");                       // title the window
+    glutCreateWindow("Final Project");                       // title the window
 
     glutIgnoreKeyRepeat(true);                              // avoids repeated keyboard calls when holding space to emulate middle mouse
 
@@ -443,9 +398,9 @@ static void initGlutState(int argc, char * argv[]) {
     glutMouseFunc(mouse);                                   // mouse click callback
     glutKeyboardFunc(keyboard);
     glutKeyboardUpFunc(keyboardUp);
-    }
+}
 
-    static void initGLState() {
+static void initGLState() {
     glClearColor(128. / 255., 200. / 255., 255. / 255., 0.);
     glClearDepth(0.);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -459,7 +414,7 @@ static void initGlutState(int argc, char * argv[]) {
         glEnable(GL_FRAMEBUFFER_SRGB);
     }
 
-    static void initShaders() {
+static void initShaders() {
     g_shaderStates.resize(g_numShaders);
     for (int i = 0; i < g_numShaders; ++i) {
         if (g_Gl2Compatible)
@@ -471,10 +426,11 @@ static void initGlutState(int argc, char * argv[]) {
 
 static void initGeometry() {
     initGround();
-    initCubes();
+    initParticles();
 }
 
 int main(int argc, char * argv[]) {
+    
     try {
         initGlutState(argc, argv);
 
@@ -505,3 +461,4 @@ int main(int argc, char * argv[]) {
         return -1;
     }
 }
+
