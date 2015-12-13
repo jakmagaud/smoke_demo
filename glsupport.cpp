@@ -4,7 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "headers/glsupport.h"
+#include "glsupport.h"
 
 using namespace std;
 

@@ -14,7 +14,7 @@
 # include <GL/glut.h>
 #endif
 
-#include "headers/ppm.h"
+#include "ppm.h"
 
 using namespace std;
 
