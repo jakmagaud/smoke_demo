@@ -197,7 +197,7 @@ static RigTForm g_skyRbt = RigTForm(Cvec3(0.0, 0.25, 4.0));
 static RigTForm g_originRbt = RigTForm(Cvec3(0.0, 0.0, 0.0));
 RigTForm eyeRbt;
 RigTForm currRbt = g_originRbt;
-static RigTForm g_sphereRbt = RigTForm(Cvec3(0.0, 0.0, 0.0));
+static RigTForm g_sphereRbt = RigTForm(Cvec3(2.0, 2.0, 0.0));
 Cvec3 g_sphereEyeCoord;
 
 ///////////////// END OF G L O B A L S //////////////////////////////////////////////////
@@ -318,7 +318,7 @@ static void drawStuff() {
     
     // draw sphere
     // ===========
-    
+    /*
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     MVM = rigTFormToMatrix(invEyeRbt * g_sphereRbt) * Matrix4::makeScale(Cvec3 (g_arcballScale * g_arcballScreenRadius, g_arcballScale * g_arcballScreenRadius, g_arcballScale * g_arcballScreenRadius));
     NMVM = normalMatrix(MVM);
@@ -328,12 +328,14 @@ static void drawStuff() {
     {
         g_sphere->draw(curSS);
     }
-    
+    */
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     
     for (int i = 0; i < MaxParticles; i++) {
         RigTForm sphere = inv(particles[i].rbt);
         Cvec3 newpos = sphere.getTranslation() + particles[i].velocity;
+        if (newpos[0] > 2.75 || newpos[0] < -2.75|| newpos[1] > 2.75)
+            newpos = Cvec3(0,0,0);
         sphere.setTranslation(newpos);
         Matrix4 MVM = rigTFormToMatrix(invEyeRbt * sphere) * Matrix4::makeScale(Cvec3(0.03, 0.03, 0.03));
         sendModelViewNormalMatrix(curSS, MVM, normalMatrix(MVM));
