@@ -3,6 +3,7 @@
 #include <memory>
 #include <stdexcept>
 #include <math.h>
+#include <time.h>
 
 #if __GNUG__
 #   include <tr1/memory>
@@ -27,6 +28,8 @@
 
 using namespace std;      // for string, vector, iostream, and other standard C++ stuff
 using namespace tr1; // for shared_ptr
+
+#define PI 3.1415926535
 
 // G L O B A L S ///////////////////////////////////////////////////
 
@@ -176,7 +179,7 @@ struct Geometry {
 
 struct Particle {
     RigTForm rbt;
-    float xv, yv, zv; //velocity
+    Cvec3 velocity; //velocity
     float life;
     shared_ptr<Geometry> sphere;
 };
@@ -214,16 +217,16 @@ static void initGround() {
 static void initParticles() {
     for (int i = 0; i < MaxParticles; i++) {
         //physics
-        particles[i].rbt = RigTForm();
+        particles[i].rbt = RigTForm(Cvec3(0.0, 0.0, 0.0));
         particles[i].life = 5;
         
-        float spread = 1.5;
-        Cvec3 gen_dir = Cvec3(0.0, 10.0, 0.0); //general direction of the particles
-        float rand_dir = (rand()%2000 - 1000.0)/1000.0; //generate a random component for each one
-        particles[i].xv = gen_dir[0] + rand_dir * spread;
-        particles[i].yv = gen_dir[1] + rand_dir * spread;
-        particles[i].zv = gen_dir[2] + rand_dir * spread;
-        
+        float spread = .05 + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(2.5)));
+        /*Cvec3 gen_dir = Cvec3(0.0, 1, 0.0); //general direction of the particles
+        Cvec3 rand_dir = Cvec3((rand()%2000 - 1000.0)/1000.0,(rand()%2000)/1000.0, 0); //generate a random component for each one
+        //particles[i].velocity = Cvec3(gen_dir[0] + rand_dir * spread, gen_dir[1] + rand_dir * spread, gen_dir[2] + rand_dir * spread);
+        particles[i].velocity = /*Cvec3(0.01 * i,0.01 * i,0) + rand_dir;*/
+        float angle = PI/3 + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(PI/3)));
+        particles[i].velocity = Cvec3(cos(angle), sin(angle), 0) * spread;
         
         //geometry
         int ibLen, vbLen;
@@ -281,10 +284,8 @@ static Matrix4 makeProjectionMatrix() {
 }
 
 static void drawStuff() {
-    
     //get eye coordinates of the center of the sphere
     g_sphereEyeCoord = Cvec3(inv(eyeRbt) * Cvec4(g_sphereRbt.getTranslation(), 1.0));
-    
     if (g_mouseLClickButton == false && g_mouseRClickButton == false)
     {
         g_arcballScale = getScreenToEyeScale(g_sphereEyeCoord[2], g_frustFovY, g_windowHeight);
@@ -317,7 +318,7 @@ static void drawStuff() {
     
     // draw sphere
     // ===========
-    /*
+    
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     MVM = rigTFormToMatrix(invEyeRbt * g_sphereRbt) * Matrix4::makeScale(Cvec3 (g_arcballScale * g_arcballScreenRadius, g_arcballScale * g_arcballScreenRadius, g_arcballScale * g_arcballScreenRadius));
     NMVM = normalMatrix(MVM);
@@ -327,20 +328,19 @@ static void drawStuff() {
     {
         g_sphere->draw(curSS);
     }
-    */
+    
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     
     for (int i = 0; i < MaxParticles; i++) {
-        //particles[i].rbt.setTranslation(Cvec3(10,10,10));
         RigTForm sphere = inv(particles[i].rbt);
-        sphere.setTranslation(Cvec3(100,100,100));
-        Matrix4 MVM = rigTFormToMatrix(invEyeRbt * g_sphereRbt) * Matrix4::makeScale(Cvec3(0.1, 0.1, 0.1));
+        Cvec3 newpos = sphere.getTranslation() + particles[i].velocity;
+        sphere.setTranslation(newpos);
+        Matrix4 MVM = rigTFormToMatrix(invEyeRbt * sphere) * Matrix4::makeScale(Cvec3(0.03, 0.03, 0.03));
         sendModelViewNormalMatrix(curSS, MVM, normalMatrix(MVM));
-        
-        safe_glUniform3f(curSS.h_uColor, 0.33, 0.33, 0.33); // set color
+        safe_glUniform3f(curSS.h_uColor, 0.69, 0.69, 0.69); // set color to grayish
         particles[i].sphere->draw(curSS);
     }
-    
+    glutPostRedisplay();
 }
 
 static void display() {
@@ -434,7 +434,7 @@ static void initGlutState(int argc, char * argv[]) {
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);  //  RGBA pixel channels and double buffering
 #endif
     glutInitWindowSize(g_windowWidth, g_windowHeight);      // create a window
-    glutCreateWindow("Assignment 3");                       // title the window
+    glutCreateWindow("Final Project");                       // title the window
     
     glutIgnoreKeyRepeat(true);                              // avoids repeated keyboard calls when holding space to emulate middle mouse
     
