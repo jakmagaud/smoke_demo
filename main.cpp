@@ -180,7 +180,7 @@ struct Particle {
     shared_ptr<Geometry> sphere;
 };
 
-const int MaxParticles = 2000;
+const int MaxParticles = 5000;
 Particle particles[MaxParticles];
 const int ParticleRadius = 0.2;
 
@@ -214,13 +214,13 @@ static void initParticles() {
         particles[i].rbt = RigTForm(Cvec3(0.0, 0.0, 0.0));
         particles[i].life = 5;
         
-        float spread = .05 + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(2.5)));
+        float spread = .01 + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(2.5)));
         /*Cvec3 gen_dir = Cvec3(0.0, 1, 0.0); //general direction of the particles
         Cvec3 rand_dir = Cvec3((rand()%2000 - 1000.0)/1000.0,(rand()%2000)/1000.0, 0); //generate a random component for each one
         //particles[i].velocity = Cvec3(gen_dir[0] + rand_dir * spread, gen_dir[1] + rand_dir * spread, gen_dir[2] + rand_dir * spread);
         particles[i].velocity = /*Cvec3(0.01 * i,0.01 * i,0) + rand_dir;*/
         float angle = PI/3 + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(PI/3)));
-        particles[i].velocity = Cvec3(cos(angle), sin(angle), 0) * spread;
+        particles[i].velocity = Cvec3(cos(angle) * .05, sin(angle) * .05, 0) * spread;
         
         //geometry
         int ibLen, vbLen;
@@ -326,15 +326,10 @@ static void drawStuff() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     
     for (int i = 0; i < MaxParticles; i++) {
-        //RigTForm sphere = inv(particles[i].rbt);
-        //cout << sphere.getTranslation()[0] << " " << sphere.getTranslation()[1] << "\n";
         Cvec3 newpos = particles[i].rbt.getTranslation() + particles[i].velocity;
         if (newpos[0] > 2.75 || newpos[0] < -2.75|| newpos[1] > 2.75)
             newpos = Cvec3(0,0,0);
         particles[i].rbt.setTranslation(newpos);
-        //cout << newpos[0] << " " << newpos[1] << "\n";
-        //cout << sphere.getTranslation()[0] << " " << sphere.getTranslation()[1] << "\n";
-        //cout << particles[i].velocity[0] << " " << particles[i].velocity[1] << "\n";
         Matrix4 MVM = rigTFormToMatrix(invEyeRbt * particles[i].rbt) * Matrix4::makeScale(Cvec3(0.02, 0.02, 0.02));
         sendModelViewNormalMatrix(curSS, MVM, normalMatrix(MVM));
         safe_glUniform3f(curSS.h_uColor, 0.69, 0.69, 0.69); // set color to grayish
