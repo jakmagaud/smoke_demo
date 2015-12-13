@@ -212,13 +212,9 @@ static void initParticles() {
     for (int i = 0; i < MaxParticles; i++) {
         //physics
         particles[i].rbt = RigTForm(Cvec3(0.0, 0.0, 0.0));
-        particles[i].life = 5;
+        particles[i].life = 3;
         
         float spread = .01 + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(2.5)));
-        /*Cvec3 gen_dir = Cvec3(0.0, 1, 0.0); //general direction of the particles
-        Cvec3 rand_dir = Cvec3((rand()%2000 - 1000.0)/1000.0,(rand()%2000)/1000.0, 0); //generate a random component for each one
-        //particles[i].velocity = Cvec3(gen_dir[0] + rand_dir * spread, gen_dir[1] + rand_dir * spread, gen_dir[2] + rand_dir * spread);
-        particles[i].velocity = /*Cvec3(0.01 * i,0.01 * i,0) + rand_dir;*/
         float angle = PI/3 + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(PI/3)));
         particles[i].velocity = Cvec3(cos(angle) * .05, sin(angle) * .05, 0) * spread;
         
