@@ -34,18 +34,14 @@ using namespace tr1; // for shared_ptr
 // G L O B A L S ///////////////////////////////////////////////////
 
 static const bool g_Gl2Compatible = false;
-
-
 static const float g_frustMinFov = 60.0;  // A minimal of 60 degree field of view
 static float g_frustFovY = g_frustMinFov; // FOV in y direction (updated by updateFrustFovY)
-
 static const float g_frustNear = -0.1;    // near plane
 static const float g_frustFar = -50.0;    // far plane
 static const float g_groundY = -2.0;      // y coordinate of the ground
 static const float g_groundSize = 10.0;   // half the ground length
 static float g_arcballScreenRadius = 1.0;
 static float g_arcballScale = 1.0;
-
 static int g_windowWidth = 512;
 static int g_windowHeight = 512;
 static bool g_mouseClickDown = false;    // is the mouse button pressed
@@ -184,7 +180,7 @@ struct Particle {
     shared_ptr<Geometry> sphere;
 };
 
-const int MaxParticles = 1000;
+const int MaxParticles = 2000;
 Particle particles[MaxParticles];
 const int ParticleRadius = 0.2;
 
@@ -194,10 +190,8 @@ static shared_ptr<Geometry> g_ground, g_sphere;
 // --------- Scene
 static const Cvec3 g_light1(2.0, 3.0, 14.0), g_light2(-2, -3.0, -5.0);  // define two lights positions in world space
 static RigTForm g_skyRbt = RigTForm(Cvec3(0.0, 0.25, 4.0));
-static RigTForm g_originRbt = RigTForm(Cvec3(0.0, 0.0, 0.0));
 RigTForm eyeRbt;
-RigTForm currRbt = g_originRbt;
-static RigTForm g_sphereRbt = RigTForm(Cvec3(2.0, 2.0, 0.0));
+static RigTForm g_sphereRbt = RigTForm(Cvec3(0.0, 0.0, 0.0));
 Cvec3 g_sphereEyeCoord;
 
 ///////////////// END OF G L O B A L S //////////////////////////////////////////////////
@@ -230,11 +224,11 @@ static void initParticles() {
         
         //geometry
         int ibLen, vbLen;
-        getSphereVbIbLen(7, 7, vbLen, ibLen);
+        getSphereVbIbLen(5, 5, vbLen, ibLen);
         
         vector<VertexPN> vtx(vbLen);
         vector<unsigned short> idx(ibLen);
-        makeSphere(1, 7, 7, vtx.begin(), idx.begin());
+        makeSphere(1, 5, 5, vtx.begin(), idx.begin());
         particles[i].sphere.reset(new Geometry(&vtx[0], &idx[0], vtx.size(), idx.size()));
         
     }
@@ -332,12 +326,16 @@ static void drawStuff() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     
     for (int i = 0; i < MaxParticles; i++) {
-        RigTForm sphere = inv(particles[i].rbt);
-        Cvec3 newpos = sphere.getTranslation() + particles[i].velocity;
+        //RigTForm sphere = inv(particles[i].rbt);
+        //cout << sphere.getTranslation()[0] << " " << sphere.getTranslation()[1] << "\n";
+        Cvec3 newpos = particles[i].rbt.getTranslation() + particles[i].velocity;
         if (newpos[0] > 2.75 || newpos[0] < -2.75|| newpos[1] > 2.75)
             newpos = Cvec3(0,0,0);
-        sphere.setTranslation(newpos);
-        Matrix4 MVM = rigTFormToMatrix(invEyeRbt * sphere) * Matrix4::makeScale(Cvec3(0.03, 0.03, 0.03));
+        particles[i].rbt.setTranslation(newpos);
+        //cout << newpos[0] << " " << newpos[1] << "\n";
+        //cout << sphere.getTranslation()[0] << " " << sphere.getTranslation()[1] << "\n";
+        //cout << particles[i].velocity[0] << " " << particles[i].velocity[1] << "\n";
+        Matrix4 MVM = rigTFormToMatrix(invEyeRbt * particles[i].rbt) * Matrix4::makeScale(Cvec3(0.02, 0.02, 0.02));
         sendModelViewNormalMatrix(curSS, MVM, normalMatrix(MVM));
         safe_glUniform3f(curSS.h_uColor, 0.69, 0.69, 0.69); // set color to grayish
         particles[i].sphere->draw(curSS);
