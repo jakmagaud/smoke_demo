@@ -17,5 +17,14 @@ void main() {
   diffuse += max(0.0, dot(normal, tolight2));
   vec3 intensity = uColor * diffuse;
 
-  fragColor = vec4(uColor, uTransparency);
+  if (uColor == vec3(0.6, 0.6, 0.6))
+  {
+	fragColor = vec4(uColor, 0.3);
+  }
+  else
+  {
+	fragColor = vec4(uColor, uTransparency);
+  }
+
+  
 }
