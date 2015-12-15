@@ -1,6 +1,7 @@
 #version 150
 
 uniform vec3 uLight, uLight2, uColor;
+uniform float uTransparency;
 
 in vec3 vNormal;
 in vec3 vPosition;
@@ -16,5 +17,5 @@ void main() {
   diffuse += max(0.0, dot(normal, tolight2));
   vec3 intensity = uColor * diffuse;
 
-  fragColor = vec4(intensity, 1.0);
+  fragColor = vec4(uColor, uTransparency);
 }
