@@ -8,8 +8,8 @@
 #   include <OpenGL/gl3.h>
 #   include <GLUT/glut.h>
 #else
-#   include <GL/glew.h>
-#   include <GL/glut.h>
+#   include "glew.h"
+#   include "glut.h""
 #endif
 
 // Check if there has been an error inside OpenGL and if yes, print the error and
