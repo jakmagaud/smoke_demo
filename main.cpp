@@ -17,14 +17,14 @@
 #   include "GL/glut.h"
 #endif
 
-#include "cvec.h"
-#include "matrix4.h"
-#include "geometrymaker.h"
-#include "ppm.h"
-#include "glsupport.h"
-#include "quat.h"
-#include "rigtform.h"
-#include "arcball.h"
+#include "headers/cvec.h"
+#include "headers/matrix4.h"
+#include "headers/geometrymaker.h"
+#include "headers/ppm.h"
+#include "headers/glsupport.h"
+#include "headers/quat.h"
+#include "headers/rigtform.h"
+#include "headers/arcball.h"
 
 using namespace std;      // for string, vector, iostream, and other standard C++ stuff
 using namespace tr1; // for shared_ptr
@@ -238,11 +238,11 @@ static void initParticles() {
 
 		//geometry
 		int ibLen, vbLen;
-		getSphereVbIbLen(5, 5, vbLen, ibLen);
+		getSphereVbIbLen(4, 4, vbLen, ibLen);
 
 		vector<VertexPN> vtx(vbLen);
 		vector<unsigned short> idx(ibLen);
-		makeSphere(7, 5, 5, vtx.begin(), idx.begin());
+		makeSphere(7, 4, 4, vtx.begin(), idx.begin());
 		particles[i].sphere.reset(new Geometry(&vtx[0], &idx[0], vtx.size(), idx.size()));
 
 	}
@@ -379,8 +379,9 @@ static void drawStuff() {
 	*/
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+    updateParticles();
 	for (int i = 0; i < MaxParticles; i++) {
-		updateParticles();
+		//updateParticles();
 		Matrix4 MVM = rigTFormToMatrix(invEyeRbt * particles[i].rbt) * Matrix4::makeScale(Cvec3(0.02, 0.02, 0.02));
 		sendModelViewNormalMatrix(curSS, MVM, normalMatrix(MVM));
 		safe_glUniform3f(curSS.h_uColor, particles[i].color[0], particles[i].color[1], particles[i].color[2]); // set color to grayish
